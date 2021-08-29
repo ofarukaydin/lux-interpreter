@@ -1,4 +1,4 @@
-use std::{any::Any, ptr};
+use std::fmt;
 
 use crate::token_type::Types;
 
@@ -18,14 +18,19 @@ pub struct Token {
     pub line: usize,
 }
 
+impl fmt::Display for TokenLiteral {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "{}", self.to_str())
+    }
+}
+
 impl TokenLiteral {
-    pub fn to_string(&self) -> String {
+    fn to_str(&self) -> String {
         match self {
             TokenLiteral::Number(num) => num.to_string(),
             TokenLiteral::String(str) => str.to_string(),
             TokenLiteral::Nil => "nil".to_string(),
-            TokenLiteral::Bool(true) => "true".to_string(),
-            TokenLiteral::Bool(false) => "false".to_string(),
+            TokenLiteral::Bool(bool) => bool.to_string(),
         }
     }
 
@@ -36,20 +41,25 @@ impl TokenLiteral {
             _ => true,
         }
     }
-    
 }
 
 impl Token {
     pub fn new(type_t: Types, lexeme: String, literal: TokenLiteral, line: usize) -> Token {
         Token {
-            lexeme,
             type_t,
-            line,
+            lexeme,
             literal,
+            line,
         }
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!("{:?}", self)
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "Line: {}, Lexeme: {}, Literal: {}, Type: {:?}",
+            self.line, self.lexeme, self.literal, self.type_t
+        )
     }
 }

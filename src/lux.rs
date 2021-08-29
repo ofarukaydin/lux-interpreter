@@ -1,4 +1,4 @@
-use crate::{error::LuxError, parser::Parser, scanner::Scanner, token::Token, token_type::Types};
+use crate::{interpreter::Interpreter, parser::Parser, scanner::Scanner, stmt::Stmt};
 use std::{
     fs::File,
     io::{self, BufRead, Read},
@@ -18,33 +18,19 @@ impl Lux {
         }
     }
 
-    fn run(&mut self, source: &str) {
+    fn run(&mut self, source: &str) -> Vec<Stmt> {
         let mut sc = Scanner::new(source.to_string());
-
         let tokens = sc.scan_tokens().to_owned();
-
         let mut parser = Parser::new(tokens);
-
-        let expr = match parser.parse() {
-            Ok(val) => {
-                // println!("{}", val.visit());
-                val
-            }
+        let statements = match parser.parse() {
+            Ok(val) => val,
             Err(err) => {
                 self.had_error = true;
                 println!("{}", err.to_string());
                 std::process::exit(65)
             }
         };
-
-        match expr.interpret() {
-            Ok(result) => println!("{}", result),
-            Err(err) => {
-                self.had_runtime_error = true;
-                println!("{}", err.to_string());
-                std::process::exit(70)
-            }
-        }
+        statements
     }
 
     pub fn run_file<P>(&mut self, path: P) -> io::Result<()>
@@ -55,21 +41,39 @@ impl Lux {
         let mut file = File::open(&path)?;
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
-        self.run(&buffer);
+        let mut interpreter = Interpreter::new();
+        let statements = self.run(&buffer);
+        match interpreter.interpret(&statements) {
+            Ok(_) => println!("Executed successfully"),
+            Err(err) => {
+                self.had_runtime_error = true;
+                println!("{}", err.to_string());
+                std::process::exit(70)
+            }
+        }
+        self.had_error = false;
         Ok(())
     }
 
     pub fn run_prompt(&mut self) -> io::Result<()> {
         let stdin = io::stdin();
+        let mut interpreter = Interpreter::new();
         for line_result in stdin.lock().lines() {
             let line = line_result?;
             if line.is_empty() {
                 break;
             }
-            self.run(&line);
+            let statements = self.run(&line);
+            match interpreter.interpret(&statements) {
+                Ok(_) => println!("statement executed"),
+                Err(err) => {
+                    self.had_runtime_error = true;
+                    println!("{}", err.to_string());
+                    std::process::exit(70)
+                }
+            }
             self.had_error = false;
         }
         Ok(())
     }
-    // to be implemented had_error = true;
 }

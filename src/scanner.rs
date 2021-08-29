@@ -63,16 +63,46 @@ impl Scanner {
     pub fn scan_token(&mut self) -> Result<(), LuxError> {
         let c = self.advance();
         match c {
-            '(' => Ok(self.add_token(Types::LEFT_PAREN)),
-            ')' => Ok(self.add_token(Types::RIGHT_PAREN)),
-            '{' => Ok(self.add_token(Types::LEFT_BRACE)),
-            '}' => Ok(self.add_token(Types::RIGHT_BRACE)),
-            ',' => Ok(self.add_token(Types::COMMA)),
-            '.' => Ok(self.add_token(Types::DOT)),
-            '-' => Ok(self.add_token(Types::MINUS)),
-            '+' => Ok(self.add_token(Types::PLUS)),
-            ';' => Ok(self.add_token(Types::SEMICOLON)),
-            '*' => Ok(self.add_token(Types::STAR)),
+            '(' => {
+                self.add_token(Types::LEFT_PAREN);
+                Ok(())
+            },
+            ')' => {
+                self.add_token(Types::RIGHT_PAREN);
+                Ok(())
+            },
+            '{' => {
+                self.add_token(Types::LEFT_BRACE);
+                Ok(())
+            },
+            '}' => {
+                self.add_token(Types::RIGHT_BRACE);
+                Ok(())
+            },
+            ',' => {
+                self.add_token(Types::COMMA);
+                Ok(())
+            },
+            '.' => {
+                self.add_token(Types::DOT);
+                Ok(())
+            },
+            '-' => {
+                self.add_token(Types::MINUS);
+                Ok(())
+            },
+            '+' => {
+                self.add_token(Types::PLUS);
+                Ok(())
+            },
+            ';' => {
+                self.add_token(Types::SEMICOLON);
+                Ok(())
+            },
+            '*' => {
+                self.add_token(Types::STAR);
+                Ok(())
+            },
 
             '!' => {
                 let token_to_add = if self.matches_char('=') {
@@ -258,11 +288,11 @@ impl Scanner {
     }
 
     fn is_alpha(char: char) -> bool {
-        (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || char == '_'
+        ('a'..='z').contains(&char) || ('A'..='Z').contains(&char) || char == '_'
     }
 
     fn is_digit(char: char) -> bool {
-        char >= '0' && char <= '9'
+        ('0'..='9').contains(&char)
     }
 
     fn is_alphanumeric(char: char) -> bool {
