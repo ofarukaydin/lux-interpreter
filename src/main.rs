@@ -6,6 +6,7 @@ pub mod parser;
 pub mod scanner;
 pub mod token;
 pub mod token_type;
+mod runtime_error;
 use expr::Expr;
 use gen_script::run_generator;
 use lux::Lux;
@@ -34,7 +35,7 @@ fn main() {
                 left: Box::new(Expr::Unary {
                     operator: Token {
                         type_t: Types::MINUS,
-                        literal: TokenLiteral::None,
+                        literal: TokenLiteral::Nil,
                         line: 1,
                         lexeme: '-'.to_string(),
                     },
@@ -46,7 +47,7 @@ fn main() {
                     type_t: Types::STAR,
                     lexeme: '*'.to_string(),
                     line: 1,
-                    literal: TokenLiteral::None,
+                    literal: TokenLiteral::Nil,
                 },
                 right: Box::new(Expr::Grouping {
                     expression: Box::new({

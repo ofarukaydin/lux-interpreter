@@ -6,37 +6,15 @@ use std::{
 };
 
 pub struct Lux {
-    had_error: bool,
+    pub had_error: bool,
+    pub had_runtime_error: bool,
 }
 
 impl Lux {
     pub fn new() -> Lux {
-        Lux { had_error: false }
-    }
-
-    fn report(&mut self, line: usize, location: &str, message: &str) -> LuxError {
-        let err = LuxError {
-            line,
-            location: location.to_string(),
-            message: message.to_string(),
-        };
-        println!(
-            "{}",
-            LuxError {
-                line,
-                location: location.to_string(),
-                message: message.to_string()
-            }
-        );
-        self.had_error = true;
-        err
-    }
-
-    pub fn error(&mut self, token: &Token, message: &str) -> LuxError {
-        if token.type_t == Types::EOF {
-            self.report(token.line, " at end", message)
-        } else {
-            self.report(token.line, &format!(" at '{}'", &token.lexeme), message)
+        Lux {
+            had_error: false,
+            had_runtime_error: false,
         }
     }
 
@@ -45,11 +23,28 @@ impl Lux {
 
         let tokens = sc.scan_tokens().to_owned();
 
-        let parser = Parser::new(tokens, self);
+        let mut parser = Parser::new(tokens);
 
-        if self.had_error {
-            std::process::exit(65)
+        let expr = match parser.parse() {
+            Ok(val) => {
+                // println!("{}", val.visit());
+                val
+            }
+            Err(err) => {
+                self.had_error = true;
+                println!("{}", err.to_string());
+                std::process::exit(65)
+            }
         };
+
+        match expr.interpret() {
+            Ok(result) => println!("{}", result),
+            Err(err) => {
+                self.had_runtime_error = true;
+                println!("{}", err.to_string());
+                std::process::exit(70)
+            }
+        }
     }
 
     pub fn run_file<P>(&mut self, path: P) -> io::Result<()>

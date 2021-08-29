@@ -1,12 +1,13 @@
+use std::{any::Any, ptr};
+
 use crate::token_type::Types;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenLiteral {
     Number(f64),
     String(String),
-    None,
-    True,
-    False,
+    Bool(bool),
+    Nil,
 }
 
 #[derive(Debug, Clone)]
@@ -22,11 +23,20 @@ impl TokenLiteral {
         match self {
             TokenLiteral::Number(num) => num.to_string(),
             TokenLiteral::String(str) => str.to_string(),
-            TokenLiteral::None => "nil".to_string(),
-            TokenLiteral::True => "true".to_string(),
-            TokenLiteral::False => "false".to_string(),
+            TokenLiteral::Nil => "nil".to_string(),
+            TokenLiteral::Bool(true) => "true".to_string(),
+            TokenLiteral::Bool(false) => "false".to_string(),
         }
     }
+
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            TokenLiteral::Bool(bool) => *bool,
+            TokenLiteral::Nil => false,
+            _ => true,
+        }
+    }
+    
 }
 
 impl Token {

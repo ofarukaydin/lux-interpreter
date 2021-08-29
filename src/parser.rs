@@ -3,49 +3,45 @@ use crate::{
     expr::Expr,
     token::{Token, TokenLiteral},
     token_type::Types,
-    Lux,
 };
 
-pub struct Parser<'a> {
+pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    lux: &'a mut Lux,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token>, lux: &'a mut Lux) -> Self {
-        Parser {
-            current: 0,
-            tokens,
-            lux,
-        }
+type ParserResult<T> = Result<T, LuxError>;
+
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
+        Parser { current: 0, tokens }
     }
 
-    fn parse(&mut self) -> Expr {
+    pub fn parse(&mut self) -> ParserResult<Expr> {
         self.expression()
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> ParserResult<Expr> {
         self.equality()
     }
 
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.comparison()?;
 
         while self.matches(vec![Types::BANG_EQUAL, Types::EQUAL_EQUAL]) {
             let operator = self.previous().clone();
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.term()?;
 
         while self.matches(vec![
             Types::GREATER,
@@ -54,93 +50,99 @@ impl<'a> Parser<'a> {
             Types::LESS_EQUAL,
         ]) {
             let operator = self.previous().clone();
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.factor()?;
 
         while self.matches(vec![Types::MINUS, Types::PLUS]) {
             let operator = self.previous().clone();
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.unary()?;
 
         while self.matches(vec![Types::SLASH, Types::STAR]) {
             let operator = self.previous().clone();
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
             }
         }
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> ParserResult<Expr> {
         if self.matches(vec![Types::BANG, Types::MINUS]) {
             let operator = self.previous().clone();
-            let right = self.unary();
-            return Expr::Unary {
+            let right = self.unary()?;
+            return Ok(Expr::Unary {
                 operator,
                 right: Box::new(right),
-            };
+            });
         }
         self.primary()
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> ParserResult<Expr> {
         if self.matches(vec![Types::FALSE]) {
-            return Expr::Literal {
-                value: TokenLiteral::False,
-            };
+            Ok(Expr::Literal {
+                value: TokenLiteral::Bool(false),
+            })
         } else if self.matches(vec![Types::TRUE]) {
-            return Expr::Literal {
-                value: TokenLiteral::True,
-            };
+            Ok(Expr::Literal {
+                value: TokenLiteral::Bool(true),
+            })
         } else if self.matches(vec![Types::NIL]) {
-            return Expr::Literal {
-                value: TokenLiteral::None,
-            };
+            Ok(Expr::Literal {
+                value: TokenLiteral::Nil,
+            })
         } else if self.matches(vec![Types::NUMBER, Types::STRING]) {
-            let expr = self.expression();
-            self.consume(Types::RIGHT_PAREN, "Expect ')' after expression");
-            return Expr::Grouping {
+            Ok(Expr::Literal {
+                value: self.previous().literal.clone(),
+            })
+        } else if self.matches(vec![Types::LEFT_PAREN]) {
+            let expr = self.expression()?;
+            self.consume(Types::RIGHT_PAREN, "Expect ')' after expression")?;
+            Ok(Expr::Grouping {
                 expression: Box::new(expr),
-            };
+            })
+        } else {
+            let err = LuxError::new(self.peek(), "Expect expression.");
+            Err(err)
         }
-        self.primary()
     }
 
-    fn consume(&mut self, token_type: Types, message: &str) -> Result<&Token, LuxError> {
+    fn consume(&mut self, token_type: Types, message: &str) -> ParserResult<&Token> {
         if self.check(token_type) {
             return Ok(self.advance());
         } else {
             let token = self.peek();
-            let mut err = self.error(token, message);
-            return Err(err);
+            let err = self.error(token, message);
+            Err(err)
         }
     }
 
-    fn error(&mut self, token: &Token, message: &str) -> LuxError {
-        self.lux.error(token, message)
+    fn error(&self, token: &Token, message: &str) -> LuxError {
+        LuxError::new(token, message)
     }
 
     fn synchronize(&mut self) {

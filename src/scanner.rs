@@ -51,7 +51,7 @@ impl Scanner {
             self.start = self.current;
             self.scan_token().unwrap();
         }
-        let token = Token::new(Types::EOF, "".to_string(), TokenLiteral::None, self.line);
+        let token = Token::new(Types::EOF, "".to_string(), TokenLiteral::Nil, self.line);
         self.tokens.push(token);
         &self.tokens
     }
@@ -168,7 +168,7 @@ impl Scanner {
     }
 
     pub fn add_token(&mut self, token_type: Types) {
-        self.add_token_literal(token_type, TokenLiteral::None)
+        self.add_token_literal(token_type, TokenLiteral::Nil)
     }
 
     fn add_token_literal(&mut self, token_type: Types, literal: TokenLiteral) {
