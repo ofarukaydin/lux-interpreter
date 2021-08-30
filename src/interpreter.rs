@@ -166,6 +166,23 @@ impl Interpreter {
                     .assign(name, eval_val.clone())?;
                 Ok(eval_val)
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let eval_left = self.evaluate(left)?;
+
+                if operator.type_t == Types::OR {
+                    if eval_left.is_truthy() {
+                        return Ok(eval_left);
+                    }
+                } else if !eval_left.is_truthy() {
+                    return Ok(eval_left);
+                }
+
+                self.evaluate(right)
+            }
         }
     }
 
@@ -227,6 +244,23 @@ impl Interpreter {
             Stmt::Block { statements } => {
                 let environment = self.environment.clone();
                 self.execute_block(statements, Environment::new_with(environment))?;
+            }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                let eval_cond = self.evaluate(condition)?;
+                if eval_cond.is_truthy() {
+                    self.execute(then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.execute(else_branch)?
+                }
+            }
+            Stmt::While { condition, body } => {
+                while self.evaluate(condition)?.is_truthy() {
+                    self.execute(body)?;
+                }
             }
         };
         Ok(())

@@ -24,6 +24,11 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
     Nil,
 }
 
@@ -47,6 +52,7 @@ impl Expr {
             Expr::Variable { .. } => todo!(),
             Expr::Nil => todo!(),
             Expr::Assign { .. } => todo!(),
+            Expr::Logical { .. } => todo!(),
         }
     }
 }

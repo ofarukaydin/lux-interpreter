@@ -43,13 +43,10 @@ impl Lux {
         file.read_to_string(&mut buffer)?;
         let mut interpreter = Interpreter::new();
         let statements = self.run(&buffer);
-        match interpreter.interpret(&statements) {
-            Ok(_) => println!("Executed successfully"),
-            Err(err) => {
-                self.had_runtime_error = true;
-                println!("{}", err.to_string());
-                std::process::exit(70)
-            }
+        if let Err(err) = interpreter.interpret(&statements) {
+            self.had_runtime_error = true;
+            println!("{}", err.to_string());
+            std::process::exit(70)
         }
         self.had_error = false;
         Ok(())
@@ -64,13 +61,10 @@ impl Lux {
                 break;
             }
             let statements = self.run(&line);
-            match interpreter.interpret(&statements) {
-                Ok(_) => println!("statement executed"),
-                Err(err) => {
-                    self.had_runtime_error = true;
-                    println!("{}", err.to_string());
-                    std::process::exit(70)
-                }
+            if let Err(err) = interpreter.interpret(&statements) {
+                self.had_runtime_error = true;
+                println!("{}", err.to_string());
+                std::process::exit(70)
             }
             self.had_error = false;
         }

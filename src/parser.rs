@@ -64,9 +64,102 @@ impl Parser {
             Ok(Stmt::Block {
                 statements: self.block()?,
             })
+        } else if self.matches(vec![Types::IF]) {
+            self.if_statement()
+        } else if self.matches(vec![Types::WHILE]) {
+            self.while_statement()
+        } else if self.matches(vec![Types::FOR]) {
+            self.for_statement()
         } else {
             self.expression_statement()
         }
+    }
+
+    fn for_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(Types::LEFT_PAREN, "Expect '(' after 'if'.")?;
+
+        let initializer = if self.matches(vec![Types::SEMICOLON]) {
+            None
+        } else if self.matches(vec![Types::VAR]) {
+            Some(self.var_decleration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let condition = if !self.check(Types::SEMICOLON) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+
+        self.consume(Types::SEMICOLON, "Expect ';' after loop condition.")?;
+
+        let increment = if !self.check(Types::RIGHT_PAREN) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Types::RIGHT_PAREN, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(inc) = increment {
+            body = Stmt::Block {
+                statements: vec![
+                    body,
+                    Stmt::Expression {
+                        expression: Box::new(inc),
+                    },
+                ],
+            }
+        }
+
+        if let Some(cnd) = condition {
+            body = Stmt::While {
+                condition: Box::new(cnd),
+                body: Box::new(body),
+            }
+        } else {
+            body = Stmt::While {
+                body: Box::new(body),
+                condition: Box::new(Expr::Literal {
+                    value: TokenLiteral::Bool(true),
+                }),
+            }
+        }
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block {
+                statements: vec![initializer, body],
+            }
+        }
+        Ok(body)
+    }
+
+    fn while_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(Types::LEFT_PAREN, "Expect '(' after 'if'.")?;
+        let condition = Box::new(self.expression()?);
+        self.consume(Types::RIGHT_PAREN, "Expect ')' after 'if'.")?;
+        let body = Box::new(self.statement()?);
+        Ok(Stmt::While { condition, body })
+    }
+
+    fn if_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(Types::LEFT_PAREN, "Expect '(' after 'if'.")?;
+        let condition = Box::new(self.expression()?);
+        self.consume(Types::RIGHT_PAREN, "Expect ')' after 'if'.")?;
+        let then_branch = Box::new(self.statement()?);
+        let else_branch = if self.matches(vec![Types::ELSE]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+
+        Ok(Stmt::If {
+            condition,
+            else_branch,
+            then_branch,
+        })
     }
 
     fn block(&mut self) -> ParserResult<Vec<Stmt>> {
@@ -101,7 +194,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> ParserResult<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.matches(vec![Types::EQUAL]) {
             match expr {
@@ -117,6 +210,37 @@ impl Parser {
                     return Err(self.error(equals, "Invalid assignment target."));
                 }
             }
+        }
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.and()?;
+
+        while self.matches(vec![Types::OR]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.equality()?;
+
+        while self.matches(vec![Types::AND]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
         }
         Ok(expr)
     }

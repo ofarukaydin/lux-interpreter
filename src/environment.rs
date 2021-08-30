@@ -51,7 +51,7 @@ impl Environment {
             self.values.insert(token.lexeme.to_owned(), value);
             return Ok(());
         } else if let Some(enclosing) = &mut self.enclosing {
-            enclosing.borrow_mut().assign(token, value)?;
+            return enclosing.borrow_mut().assign(token, value);
         }
 
         Err(RuntimeError::new(
