@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{token::Token, token_type::Types};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct LuxError {
     pub message: String,
     pub line: usize,

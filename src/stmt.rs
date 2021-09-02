@@ -1,6 +1,6 @@
-use crate::{expr::Expr, token::Token};
+use crate::{expr::Expr, function::Function, token::Token};
 
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Stmt {
     Expression {
         expression: Box<Expr>,
@@ -20,10 +20,13 @@ pub enum Stmt {
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
     },
+    Function(Function),
     While {
         condition: Box<Expr>,
         body: Box<Stmt>,
     },
+    Return {
+        keyword: Token,
+        value: Box<Expr>,
+    },
 }
-
-impl Stmt {}

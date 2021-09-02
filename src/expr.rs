@@ -1,6 +1,6 @@
-use crate::token::{Token, TokenLiteral};
+use crate::{literal::Literal, token::Token};
 
-#[derive(Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -11,7 +11,7 @@ pub enum Expr {
         expression: Box<Expr>,
     },
     Literal {
-        value: TokenLiteral,
+        value: Literal,
     },
     Unary {
         operator: Token,
@@ -29,30 +29,10 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
+    },
     Nil,
-}
-
-impl Expr {
-    pub fn visit(&self) -> String {
-        match self {
-            Expr::Binary {
-                left,
-                right,
-                operator,
-            } => {
-                format!("({} {} {})", &operator.lexeme, left.visit(), right.visit())
-            }
-            Expr::Grouping { expression } => {
-                format!("(group {})", expression.visit())
-            }
-            Expr::Literal { value } => value.to_string(),
-            Expr::Unary { operator, right } => {
-                format!("({} {})", &operator.lexeme, right.visit())
-            }
-            Expr::Variable { .. } => todo!(),
-            Expr::Nil => todo!(),
-            Expr::Assign { .. } => todo!(),
-            Expr::Logical { .. } => todo!(),
-        }
-    }
 }

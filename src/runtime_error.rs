@@ -4,8 +4,8 @@ use crate::token::Token;
 
 #[derive(Debug)]
 pub struct RuntimeError {
-    token: Token,
-    message: String,
+    pub token: Token,
+    pub message: String,
 }
 
 impl RuntimeError {

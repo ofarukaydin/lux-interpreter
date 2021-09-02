@@ -1,7 +1,11 @@
+mod callable;
+mod clock;
 mod environment;
 pub mod error;
 mod expr;
+mod function;
 mod interpreter;
+mod literal;
 mod lux;
 pub mod parser;
 mod runtime_error;
@@ -10,7 +14,6 @@ mod stmt;
 pub mod token;
 pub mod token_type;
 use lux::Lux;
-
 use std::env;
 use text_colorizer::*;
 
@@ -37,24 +40,24 @@ fn main() {
 //         left: Box::new(Expr::Unary {
 //             operator: Token {
 //                 type_t: Types::MINUS,
-//                 literal: TokenLiteral::Nil,
+//                 literal: Literal::Nil,
 //                 line: 1,
 //                 lexeme: '-'.to_string(),
 //             },
 //             right: Box::new(Expr::Literal {
-//                 value: TokenLiteral::Number(123.0),
+//                 value: Literal::Number(123.0),
 //             }),
 //         }),
 //         operator: Token {
 //             type_t: Types::STAR,
 //             lexeme: '*'.to_string(),
 //             line: 1,
-//             literal: TokenLiteral::Nil,
+//             literal: Literal::Nil,
 //         },
 //         right: Box::new(Expr::Grouping {
 //             expression: Box::new({
 //                 Expr::Literal {
-//                     value: TokenLiteral::Number(45.67),
+//                     value: Literal::Number(45.67),
 //                 }
 //             }),
 //         }),

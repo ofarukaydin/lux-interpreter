@@ -1,26 +1,38 @@
+use std::panic::{panic_any, UnwindSafe};
 use std::{cell::RefCell, ops::Neg, rc::Rc};
 
+use crate::callable::LuxCallable;
+use crate::function::LuxFunction;
+use crate::literal::Literal;
+use crate::stmt::Stmt;
+use crate::token::Token;
 use crate::{
-    environment::Environment,
-    expr::Expr,
-    runtime_error::RuntimeError,
-    stmt::Stmt,
-    token::{Token, TokenLiteral},
+    clock::Clock, environment::Environment, expr::Expr, runtime_error::RuntimeError,
     token_type::Types,
 };
-
 pub type RuntimeResult<T> = Result<T, RuntimeError>;
 
 pub struct Interpreter {
-    environment: Rc<RefCell<Environment>>,
+    pub environment: Rc<RefCell<Environment>>,
+    pub globals: Rc<RefCell<Environment>>,
 }
+
+impl UnwindSafe for Interpreter {}
 
 impl Interpreter {
     pub fn new() -> Self {
-        let environment = Environment::new();
-        Self { environment }
+        let globals = Environment::new();
+        let environment = globals.clone();
+        globals
+            .borrow_mut()
+            .define("clock".to_string(), Literal::Clock(Clock::new()));
+
+        Self {
+            environment,
+            globals,
+        }
     }
-    pub fn evaluate(&mut self, expr: &Expr) -> RuntimeResult<TokenLiteral> {
+    pub fn evaluate(&mut self, expr: &Expr) -> RuntimeResult<Literal> {
         match expr {
             Expr::Binary {
                 left,
@@ -33,41 +45,38 @@ impl Interpreter {
 
                 match operator.type_t {
                     Types::MINUS => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Number(num_left - num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Number(num_left - num_right));
                             }
                         }
                         num_err
                     }
                     Types::SLASH => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Number(num_left / num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Number(num_left / num_right));
                             }
                         }
                         num_err
                     }
                     Types::STAR => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Number(num_left * num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Number(num_left * num_right));
                             }
                         }
                         num_err
                     }
                     Types::PLUS => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Number(num_left + num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Number(num_left + num_right));
                             }
                         }
-                        if let TokenLiteral::String(str_left) = eval_left {
-                            if let TokenLiteral::String(str_right) = eval_right {
-                                return Ok(TokenLiteral::String(format!(
-                                    "{}{}",
-                                    str_left, str_right
-                                )));
+                        if let Literal::String(str_left) = eval_left {
+                            if let Literal::String(str_right) = eval_right {
+                                return Ok(Literal::String(format!("{}{}", str_left, str_right)));
                             }
                         }
                         Err(RuntimeError::new(
@@ -76,48 +85,48 @@ impl Interpreter {
                         ))
                     }
                     Types::GREATER => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Bool(num_left > num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Bool(num_left > num_right));
                             }
                         }
                         num_err
                     }
                     Types::GREATER_EQUAL => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Bool(num_left >= num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Bool(num_left >= num_right));
                             }
                         }
                         num_err
                     }
                     Types::LESS => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Bool(num_left < num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Bool(num_left < num_right));
                             }
                         }
                         num_err
                     }
                     Types::LESS_EQUAL => {
-                        if let TokenLiteral::Number(num_left) = eval_left {
-                            if let TokenLiteral::Number(num_right) = eval_right {
-                                return Ok(TokenLiteral::Bool(num_left <= num_right));
+                        if let Literal::Number(num_left) = eval_left {
+                            if let Literal::Number(num_right) = eval_right {
+                                return Ok(Literal::Bool(num_left <= num_right));
                             }
                         }
                         num_err
                     }
                     Types::BANG_EQUAL => {
                         if eval_left != eval_right {
-                            return Ok(TokenLiteral::Bool(true));
+                            return Ok(Literal::Bool(true));
                         }
-                        Ok(TokenLiteral::Bool(false))
+                        Ok(Literal::Bool(false))
                     }
-                    Types::EQUAL => {
+                    Types::EQUAL_EQUAL => {
                         if eval_left == eval_right {
-                            return Ok(TokenLiteral::Bool(true));
+                            return Ok(Literal::Bool(true));
                         }
-                        Ok(TokenLiteral::Bool(false))
+                        Ok(Literal::Bool(false))
                     }
 
                     _ => Err(RuntimeError::new(
@@ -134,17 +143,17 @@ impl Interpreter {
                 match operator.type_t {
                     Types::MINUS => {
                         let is_err = Self::check_number_operand(operator, &eval_right);
-                        if let TokenLiteral::Number(num) = eval_right {
-                            Ok(TokenLiteral::Number(num.to_owned().neg()))
+                        if let Literal::Number(num) = eval_right {
+                            Ok(Literal::Number(num.neg()))
                         } else {
                             is_err
                         }
                     }
                     Types::BANG => {
                         if eval_right.is_truthy() {
-                            Ok(TokenLiteral::Bool(true))
+                            Ok(Literal::Bool(true))
                         } else {
-                            Ok(TokenLiteral::Bool(false))
+                            Ok(Literal::Bool(false))
                         }
                     }
                     _ => Err(RuntimeError::new(
@@ -153,7 +162,7 @@ impl Interpreter {
                     )),
                 }
             }
-            Expr::Nil => Ok(TokenLiteral::Nil),
+            Expr::Nil => Ok(Literal::Nil),
             Expr::Variable { name } => {
                 let env = self.environment.borrow();
                 let var = env.get(name)?;
@@ -163,7 +172,7 @@ impl Interpreter {
                 let eval_val = self.evaluate(value)?;
                 self.environment
                     .borrow_mut()
-                    .assign(name, eval_val.clone())?;
+                    .assign(name.clone(), eval_val.clone())?;
                 Ok(eval_val)
             }
             Expr::Logical {
@@ -183,14 +192,44 @@ impl Interpreter {
 
                 self.evaluate(right)
             }
+            Expr::Call {
+                arguments,
+                callee,
+                paren,
+            } => {
+                let eval_callee = self.evaluate(callee.as_ref())?;
+                let mut eval_arguments: Vec<Literal> = vec![];
+
+                for argument in arguments {
+                    eval_arguments.push(self.evaluate(argument)?);
+                }
+
+                match eval_callee {
+                    Literal::Function(func) => {
+                        if eval_arguments.len() != func.arity() {
+                            return Err(RuntimeError {
+                                token: paren.clone(),
+                                message: format!(
+                                    "Expected {} arguments but got {}.",
+                                    func.arity(),
+                                    eval_arguments.len()
+                                ),
+                            });
+                        }
+
+                        Ok(func.call(self, eval_arguments)?)
+                    }
+                    _ => Err(RuntimeError::new(
+                        paren.clone(),
+                        "Can only call functions and classes.".to_string(),
+                    )),
+                }
+            }
         }
     }
 
-    fn check_number_operand(
-        operator: &Token,
-        operand: &TokenLiteral,
-    ) -> RuntimeResult<TokenLiteral> {
-        if let TokenLiteral::Number(_) = operand {
+    fn check_number_operand(operator: &Token, operand: &Literal) -> RuntimeResult<Literal> {
+        if let Literal::Number(_) = operand {
             Ok(operand.to_owned())
         } else {
             Err(RuntimeError::new(
@@ -202,15 +241,15 @@ impl Interpreter {
 
     fn check_number_operands(
         operator: &Token,
-        left: &TokenLiteral,
-        right: &TokenLiteral,
-    ) -> RuntimeResult<TokenLiteral> {
+        left: &Literal,
+        right: &Literal,
+    ) -> RuntimeResult<Literal> {
         let err = Err(RuntimeError::new(
             operator.to_owned(),
             "Operands must be numbers.".to_string(),
         ));
-        if let TokenLiteral::Number(_) = left {
-            if let TokenLiteral::Number(_) = right {
+        if let Literal::Number(_) = left {
+            if let Literal::Number(_) = right {
                 return Ok(left.to_owned());
             }
             err
@@ -262,11 +301,22 @@ impl Interpreter {
                     self.execute(body)?;
                 }
             }
+            Stmt::Function(stmt) => {
+                let lux_function = LuxFunction::new(stmt.clone(), self.environment.clone());
+                self.environment.borrow_mut().define(
+                    stmt.name.lexeme.clone(),
+                    Literal::Function(Box::new(lux_function)),
+                )
+            }
+            Stmt::Return { value, .. } => {
+                let value = self.evaluate(value)?;
+                panic_any(value)
+            }
         };
         Ok(())
     }
 
-    fn execute_block(
+    pub fn execute_block(
         &mut self,
         statements: &[Stmt],
         environment: Rc<RefCell<Environment>>,
@@ -281,5 +331,11 @@ impl Interpreter {
         }
         self.environment = previous;
         Ok(())
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
     }
 }

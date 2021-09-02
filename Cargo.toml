@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 text-colorizer = "1"
 scanner-rust = "2.0.15"
+rand = "0.8.4"

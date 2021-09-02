@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Types {
     // Single-character tokens.
     LEFT_PAREN,

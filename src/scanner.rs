@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use crate::error::LuxError;
-use crate::token::{Token, TokenLiteral};
+use crate::literal::Literal;
+use crate::token::{Token};
 use crate::token_type::Types;
 
-#[derive(Debug)]
 pub struct Scanner {
     source: String,
     tokens: Vec<Token>,
@@ -51,7 +51,7 @@ impl Scanner {
             self.start = self.current;
             self.scan_token().unwrap();
         }
-        let token = Token::new(Types::EOF, "".to_string(), TokenLiteral::Nil, self.line);
+        let token = Token::new(Types::EOF, "".to_string(), Literal::Nil, self.line);
         self.tokens.push(token);
         &self.tokens
     }
@@ -66,43 +66,43 @@ impl Scanner {
             '(' => {
                 self.add_token(Types::LEFT_PAREN);
                 Ok(())
-            },
+            }
             ')' => {
                 self.add_token(Types::RIGHT_PAREN);
                 Ok(())
-            },
+            }
             '{' => {
                 self.add_token(Types::LEFT_BRACE);
                 Ok(())
-            },
+            }
             '}' => {
                 self.add_token(Types::RIGHT_BRACE);
                 Ok(())
-            },
+            }
             ',' => {
                 self.add_token(Types::COMMA);
                 Ok(())
-            },
+            }
             '.' => {
                 self.add_token(Types::DOT);
                 Ok(())
-            },
+            }
             '-' => {
                 self.add_token(Types::MINUS);
                 Ok(())
-            },
+            }
             '+' => {
                 self.add_token(Types::PLUS);
                 Ok(())
-            },
+            }
             ';' => {
                 self.add_token(Types::SEMICOLON);
                 Ok(())
-            },
+            }
             '*' => {
                 self.add_token(Types::STAR);
                 Ok(())
-            },
+            }
 
             '!' => {
                 let token_to_add = if self.matches_char('=') {
@@ -198,10 +198,10 @@ impl Scanner {
     }
 
     pub fn add_token(&mut self, token_type: Types) {
-        self.add_token_literal(token_type, TokenLiteral::Nil)
+        self.add_token_literal(token_type, Literal::Nil)
     }
 
-    fn add_token_literal(&mut self, token_type: Types, literal: TokenLiteral) {
+    fn add_token_literal(&mut self, token_type: Types, literal: Literal) {
         let text = &self.source[self.start..self.current];
         self.tokens
             .push(Token::new(token_type, text.to_string(), literal, self.line))
@@ -242,7 +242,7 @@ impl Scanner {
 
         self.advance();
         let value = (&self.source[self.start + 1..self.current - 1]).to_string();
-        self.add_token_literal(Types::STRING, TokenLiteral::String(value));
+        self.add_token_literal(Types::STRING, Literal::String(value));
         Ok(())
     }
 
@@ -259,7 +259,7 @@ impl Scanner {
 
         self.add_token_literal(
             Types::NUMBER,
-            TokenLiteral::Number((&self.source[self.start..self.current]).parse().unwrap()),
+            Literal::Number((&self.source[self.start..self.current]).parse().unwrap()),
         )
     }
 
