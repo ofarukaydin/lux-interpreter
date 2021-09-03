@@ -1,4 +1,6 @@
-use crate::{interpreter::Interpreter, parser::Parser, scanner::Scanner, stmt::Stmt};
+use crate::{
+    interpreter::Interpreter, parser::Parser, resolver::Resolver, scanner::Scanner, stmt::Stmt,
+};
 use std::{
     fs::File,
     io::{self, BufRead, Read},
@@ -42,12 +44,18 @@ impl Lux {
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
         let mut interpreter = Interpreter::new();
+        let mut resolver = Resolver::new(&mut interpreter);
         let statements = self.run(&buffer);
-        if let Err(err) = interpreter.interpret(&statements) {
+        if let Err(err) = resolver.resolve(&statements) {
+            println!("{}", err.to_string());
+            self.had_error = true;
+            std::process::exit(75)
+        } else if let Err(err) = interpreter.interpret(&statements) {
             self.had_runtime_error = true;
             println!("{}", err.to_string());
             std::process::exit(70)
         }
+
         self.had_error = false;
         Ok(())
     }

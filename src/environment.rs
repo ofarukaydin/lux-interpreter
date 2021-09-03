@@ -4,7 +4,7 @@ use crate::{
     interpreter::RuntimeResult, literal::Literal, runtime_error::RuntimeError, token::Token,
 };
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Eq)]
 pub struct Environment {
     values: HashMap<String, Literal>,
     enclosing: Option<Rc<RefCell<Environment>>>,
@@ -34,7 +34,7 @@ impl Environment {
         if let Some(val) = self.values.get(key) {
             return Ok(val.clone());
         } else if let Some(enclosing) = &self.enclosing {
-            let env = enclosing.borrow();
+            let env = enclosing.try_borrow().unwrap();
             return env.get(name);
         }
 
@@ -42,6 +42,22 @@ impl Environment {
             name.to_owned(),
             format!("Undefined variable '{}'.", name.lexeme.to_owned()),
         ))
+    }
+
+    pub fn assign_at(
+        &mut self,
+        distance: usize,
+        token: Token,
+        value: Literal,
+    ) -> RuntimeResult<()> {
+        self.ancestor(distance)
+            .try_borrow_mut()
+            .unwrap()
+            .values
+            .insert(token.lexeme, value)
+            .unwrap();
+
+        Ok(())
     }
 
     pub fn assign(&mut self, token: Token, value: Literal) -> RuntimeResult<()> {
@@ -58,5 +74,23 @@ impl Environment {
             token.clone(),
             format!("Undefined variable '{}'.", token.lexeme),
         ))
+    }
+
+    pub fn get_at(&self, distance: usize, name: &str) -> RuntimeResult<Literal> {
+        let ancestor = self.ancestor(distance);
+        let borrowed_ancestor = ancestor.try_borrow().unwrap();
+        let value = borrowed_ancestor.values.get(name).unwrap();
+
+        Ok(value.clone())
+    }
+
+    fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let mut env = Rc::new(RefCell::new(self.clone()));
+
+        for _ in 0..distance {
+            env = self.enclosing.clone().unwrap()
+        }
+
+        env
     }
 }

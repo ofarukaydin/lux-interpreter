@@ -1,6 +1,6 @@
 use crate::{expr::Expr, function::Function, token::Token};
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, Eq)]
 pub enum Stmt {
     Expression {
         expression: Box<Expr>,

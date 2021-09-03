@@ -13,6 +13,7 @@ pub mod scanner;
 mod stmt;
 pub mod token;
 pub mod token_type;
+mod resolver;
 use lux::Lux;
 use std::env;
 use text_colorizer::*;

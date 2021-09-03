@@ -1,6 +1,6 @@
 use crate::{literal::Literal, token::Token};
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Eq, PartialEq, Clone, Debug, Hash)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

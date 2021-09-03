@@ -1,24 +1,23 @@
 use core::fmt;
 use rand::Rng;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    hash::{Hash, Hasher},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
     callable::LuxCallable,
     interpreter::{Interpreter, RuntimeResult},
-    literal::Literal,
+    literal::{Float, Literal},
 };
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct Clock {
     arity: usize,
     id: usize,
 }
 
 impl LuxCallable for Clock {
-    fn call(
-        &self,
-        _: &mut Interpreter,
-        _: Vec<Literal>,
-    ) -> RuntimeResult<Literal> {
+    fn call(&self, _: &mut Interpreter, _: Vec<Literal>) -> RuntimeResult<Literal> {
         let start = SystemTime::now();
         let since_the_epoch = start
             .duration_since(UNIX_EPOCH)
@@ -26,7 +25,7 @@ impl LuxCallable for Clock {
 
         let secs = since_the_epoch.as_secs();
 
-        Ok(Literal::Number(secs as f64))
+        Ok(Literal::Number(Float(secs as f64)))
     }
 
     fn to_str(&self) -> String {
@@ -59,5 +58,18 @@ impl Default for Clock {
 impl fmt::Display for Clock {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "<native fn>",)
+    }
+}
+
+impl PartialEq for Clock {
+    fn eq(&self, other: &Self) -> bool {
+        self.arity == other.arity && self.id == other.id
+    }
+}
+
+impl Hash for Clock {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        // Delegate hashing to the MuseumNumber.
+        self.id.hash(hasher);
     }
 }

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::error::LuxError;
-use crate::literal::Literal;
-use crate::token::{Token};
+use crate::literal::{Float, Literal};
+use crate::token::Token;
 use crate::token_type::Types;
 
 pub struct Scanner {
@@ -257,10 +257,9 @@ impl Scanner {
             }
         }
 
-        self.add_token_literal(
-            Types::NUMBER,
-            Literal::Number((&self.source[self.start..self.current]).parse().unwrap()),
-        )
+        let num = (&self.source[self.start..self.current]).parse().unwrap();
+
+        self.add_token_literal(Types::NUMBER, Literal::Number(Float(num)))
     }
 
     fn peek_next(&mut self) -> char {

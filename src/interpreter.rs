@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::panic::{panic_any, UnwindSafe};
 use std::{cell::RefCell, ops::Neg, rc::Rc};
 
@@ -15,6 +16,7 @@ pub type RuntimeResult<T> = Result<T, RuntimeError>;
 pub struct Interpreter {
     pub environment: Rc<RefCell<Environment>>,
     pub globals: Rc<RefCell<Environment>>,
+    pub locals: HashMap<Expr, usize>,
 }
 
 impl UnwindSafe for Interpreter {}
@@ -23,6 +25,7 @@ impl Interpreter {
     pub fn new() -> Self {
         let globals = Environment::new();
         let environment = globals.clone();
+        let locals: HashMap<Expr, usize> = HashMap::new();
         globals
             .borrow_mut()
             .define("clock".to_string(), Literal::Clock(Clock::new()));
@@ -30,6 +33,7 @@ impl Interpreter {
         Self {
             environment,
             globals,
+            locals,
         }
     }
     pub fn evaluate(&mut self, expr: &Expr) -> RuntimeResult<Literal> {
@@ -164,12 +168,25 @@ impl Interpreter {
             }
             Expr::Nil => Ok(Literal::Nil),
             Expr::Variable { name } => {
-                let env = self.environment.borrow();
-                let var = env.get(name)?;
+                let var = self.lookup_variable(name, expr)?;
                 Ok(var)
             }
             Expr::Assign { name, value } => {
                 let eval_val = self.evaluate(value)?;
+                let distance = self.locals.get(expr);
+
+                if let Some(distance) = distance {
+                    self.environment.borrow_mut().assign_at(
+                        distance.to_owned(),
+                        name.clone(),
+                        eval_val.clone(),
+                    )?;
+                } else {
+                    self.globals
+                        .borrow_mut()
+                        .assign(name.clone(), eval_val.clone())?;
+                }
+
                 self.environment
                     .borrow_mut()
                     .assign(name.clone(), eval_val.clone())?;
@@ -331,6 +348,18 @@ impl Interpreter {
         }
         self.environment = previous;
         Ok(())
+    }
+
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr.clone(), depth);
+    }
+
+    fn lookup_variable(&self, name: &Token, expr: &Expr) -> RuntimeResult<Literal> {
+        if let Some(distance) = self.locals.get(expr) {
+            self.environment.borrow().get_at(*distance, &name.lexeme)
+        } else {
+            self.globals.borrow().get(name)
+        }
     }
 }
 

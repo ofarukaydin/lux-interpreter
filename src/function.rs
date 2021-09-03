@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    hash::{Hash, Hasher},
     panic::{self, AssertUnwindSafe},
     rc::Rc,
 };
@@ -14,14 +15,14 @@ use crate::{
 };
 use rand::Rng;
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, Eq)]
 pub struct Function {
     pub name: Token,
     pub param: Vec<Token>,
     pub body: Vec<Stmt>,
 }
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(Clone, Debug, Eq)]
 pub struct LuxFunction {
     decleration: Function,
     id: usize,
@@ -87,5 +88,20 @@ impl LuxFunction {
             id,
             closure,
         }
+    }
+}
+
+impl PartialEq for LuxFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.decleration == other.decleration
+            && self.id == other.id
+            && self.closure == other.closure
+    }
+}
+
+impl Hash for LuxFunction {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        // Delegate hashing to the MuseumNumber.
+        self.id.hash(hasher);
     }
 }
